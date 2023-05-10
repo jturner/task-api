@@ -14,7 +14,13 @@ async fn run_foo_task(task: &Task) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run_bar_task() -> Result<(), Box<dyn std::error::Error>> {
-    let resp = reqwest::get("https://www.whattimeisitrightnow.com/").await?;
+    let client = reqwest::Client::builder()
+        .user_agent("task-api v0.0.1")
+        .build()?;
+    let resp = client
+        .get("https://www.whattimeisitrightnow.com/")
+        .send()
+        .await?;
 
     println!("{}", resp.status());
     Ok(())
