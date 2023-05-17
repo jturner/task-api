@@ -1,4 +1,4 @@
-use super::{Task, Uuid};
+use super::{State, Task, TaskType, Uuid};
 use chrono::Utc;
 use rand::{thread_rng, Rng};
 use rocksdb::DB;
@@ -36,7 +36,7 @@ async fn run_baz_task() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn set_status(
     task: Task,
-    state: &str,
+    state: State,
     db: Arc<DB>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     db.put(
@@ -45,7 +45,7 @@ async fn set_status(
             id: task.id,
             task_type: task.task_type,
             execution_time: task.execution_time,
-            state: Some(state.to_string()),
+            state: Some(state),
         })
         .unwrap(),
     )
@@ -68,19 +68,20 @@ pub async fn run_worker(db: Arc<DB>) {
 
         for (_, val) in result.iter() {
             let now = Utc::now().timestamp();
-            if val.state == Some("new".to_string()) && now >= val.execution_time {
-                set_status(val.clone(), "running", db.clone())
+            if val.state == Some(State::New) && now >= val.execution_time {
+                set_status(val.clone(), State::Running, db.clone())
                     .await
                     .unwrap();
 
-                match val.task_type.as_str() {
-                    "Foo" => run_foo_task(val).await.unwrap(),
-                    "Bar" => run_bar_task().await.unwrap(),
-                    "Baz" => run_baz_task().await.unwrap(),
-                    _ => (),
+                match val.task_type {
+                    TaskType::Foo => run_foo_task(val).await.unwrap(),
+                    TaskType::Bar => run_bar_task().await.unwrap(),
+                    TaskType::Baz => run_baz_task().await.unwrap(),
                 }
 
-                set_status(val.clone(), "done", db.clone()).await.unwrap();
+                set_status(val.clone(), State::Done, db.clone())
+                    .await
+                    .unwrap();
             }
         }
 

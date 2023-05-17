@@ -8,6 +8,20 @@ use std::sync::Arc;
 use uuid::Uuid;
 use warp::{http, Filter};
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+enum TaskType {
+    Foo,
+    Bar,
+    Baz,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+enum State {
+    New,
+    Running,
+    Done,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct Id {
     id: Uuid,
@@ -16,9 +30,9 @@ struct Id {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct Task {
     id: Option<Uuid>,
-    task_type: String,
+    task_type: TaskType,
     execution_time: i64,
-    state: Option<String>,
+    state: Option<State>,
 }
 
 async fn add_task(task: Task, db: Arc<DB>) -> Result<impl warp::Reply, warp::Rejection> {
@@ -30,7 +44,7 @@ async fn add_task(task: Task, db: Arc<DB>) -> Result<impl warp::Reply, warp::Rej
             id: Some(id),
             task_type: task.task_type,
             execution_time: (Utc::now() + Duration::seconds(task.execution_time)).timestamp(),
-            state: Some("new".to_string()),
+            state: Some(State::New),
         })
         .unwrap(),
     )
